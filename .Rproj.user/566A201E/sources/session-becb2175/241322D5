@@ -12,13 +12,13 @@
     "properties": {
         "expression": "Daily.movement",
         "caption": "Daily.movement",
-        "totalObservations": "56",
-        "displayedObservations": "56",
-        "variables": "4",
-        "cacheKey": "CA5B6AF9",
+        "totalObservations": "1112",
+        "displayedObservations": "1112",
+        "variables": "5",
+        "cacheKey": "A76E37A9",
         "object": "Daily.movement",
         "environment": "",
-        "contentUrl": "grid_resource/gridviewer.html?env=&obj=Daily.movement&cache_key=CA5B6AF9&max_cols=50",
+        "contentUrl": "grid_resource/gridviewer.html?env=&obj=Daily.movement&cache_key=A76E37A9&max_cols=50",
         "preview": "0",
         "source_window_id": "",
         "Source": "Source"
