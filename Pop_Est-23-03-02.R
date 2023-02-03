@@ -23,6 +23,18 @@ Data<- Data %>%
 
 
 
+<<<<<<< Updated upstream
+=======
+#To do: Create a function that looks at the dataset and fills in the NA values based on set rules. 
+X
+
+
+
+
+
+
+
+>>>>>>> Stashed changes
 # Obtain USGS data for site of interest. URL to helpful page: https://waterdata.usgs.gov/blog/dataretrieval/
 siteNo<- "11476500" # location code for Miranda
 pCode <- "00060"  # Data type: Discharge 
