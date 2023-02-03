@@ -3,8 +3,6 @@ library(tidyverse)
 library(lubridate)
 library(dataRetrieval)
 
-# Create a function that looks a the ne values and then use apply for the net column 
-
 
 
 #Read in review data and add Date
@@ -15,24 +13,15 @@ Data<- Data %>%
   mutate(Date = ymd_h(Date))
 
 
-# Try to remove the counts of fish < 40cm based on the number of columns that contain those values
-tmp<- matrix(c(4,37,45, 40,34,NA,
-               5,37,45, 40,34,NA,
-               6,37,45, 40,45,32 ) ,nrow = 3, ncol = 6,byrow = T)
-tmp<- as.data.frame(tmp)
-names(tmp)<- c("count", "size1","size2","size3","size4","size5")
+Data$lessthan40<- apply(Data[8:27],1,function(x){  # Function to remove the counts that are less than 40cm and correct the net counts
+  sum(x < 40,na.rm = T)
+  }
+)    
 
-apply(tmp, 1,function(){
-  length(tmp[1,2:6 < 40])
-   }
- )
-
-# Need to apply this function over all rows 
-sum(tmp[1,2:6] < 40,na.rm = T) #for row 1 counts the number of columns that have values less than 40. 
+Data<- Data %>% 
+  mutate(Net.corrected = Net - lessthan40)
 
 
-
-tmp[2,2:6]
 
 # Obtain USGS data for site of interest. URL to helpful page: https://waterdata.usgs.gov/blog/dataretrieval/
 siteNo<- "11476500" # location code for Miranda

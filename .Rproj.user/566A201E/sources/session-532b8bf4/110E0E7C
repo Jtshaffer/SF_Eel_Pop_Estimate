@@ -1,0 +1,28 @@
+{
+    "id": "110E0E7C",
+    "path": null,
+    "project_path": null,
+    "type": "object_explorer",
+    "hash": "0",
+    "contents": "",
+    "dirty": false,
+    "created": 1675459713674.0,
+    "source_on_save": false,
+    "relative_order": 5,
+    "properties": {
+        "id": "c37cc803748b44cfbd7cd6b1b1af9824",
+        "name": "tmp1",
+        "title": "tmp1",
+        "language": "R",
+        "source_window_id": "",
+        "Source": "Source"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 3904937785964127604,
+    "encoding": "",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1675459713674,
+    "read_only": false,
+    "read_only_alternatives": []
+}
