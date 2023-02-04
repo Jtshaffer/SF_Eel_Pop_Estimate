@@ -2,7 +2,15 @@
 library(tidyverse)
 library(lubridate)
 library(dataRetrieval)
-?tidyverse
+
+# Means to randomly interject NA values to a data frame
+#source("NA_Value_Creator.R")
+
+#Way to randomly interject NA values to a vector
+# ind <- which(foo %in% sample(foo, 15))
+# #now replace those indices in foo with NA
+# foo[ind]<-NA
+
 
 #Read in review data and add Date
 Data<- as.data.frame(readxl::read_xlsx("E:/CalTrout/SF_Eel_Didson/Review Data/Review_Data-01-13-23.xlsx"))
@@ -11,6 +19,45 @@ Data<- Data %>%
   mutate(Date = paste(Year,Month,Day,Hour, sep = "-")) %>% 
   mutate(Date = ymd_h(Date))
 
+
+Data$lessthan40<- apply(Data[8:27],1,function(x){  # Function to remove the counts that are less than 40cm and correct the net counts
+  sum(x < 40,na.rm = T)
+  }
+)    
+
+Data<- Data %>% 
+  mutate(Net.corrected = Net - lessthan40)
+
+
+
+
+#To do: Create a function that looks at the dataset and fills in the NA values based on set rules. 
+
+#Data Creation
+Day1<- rep(1,24)
+Day2<- rep(2,24)
+Day3<- rep(3,24)
+Day<- c(Day1,Day2,Day3)
+
+Hour<- rep(1:24,3)
+Net <- round(rnorm(length(Day),mean = 2))
+
+Dat<- data.frame(Day= Day,Hour= Hour,Net= Net)
+Dat[27,3]<- NA
+
+# Correcting the NA values
+
+# if there is an NA then take the average of the net movement 24 hours prior and 24 hours after
+
+
+Dat[27,3] # original location of the NA
+Dat[27-24,3] #24hours prior 
+Dat[27+24,3] #24hours post 
+
+mean(c(Dat[27-24,3],Dat[27+24,3]))
+
+Dat$new.net<- sapply(Dat[,3],function(x)
+  if_else(is.na(x), mean(c(Dat[which(is.na(Dat),arr.ind = T)[1]-24,3],Dat[which(is.na(Dat),arr.ind = T)[1]+24,3])),x) 
 
 
 
@@ -41,11 +88,10 @@ Data<-Data %>%
 
 
 #Plot the two variables 
-
 scale.factor<- 10
 
 
-# unction to scale the axis automatically 
+# function to scale the axis automatically 
 max_first  <- max(Data$Daily.count)   # Specify max of first y axis
 max_second <- max(Data$Flow_Inst) # Specify max of second y axis
 min_first  <- min(Data$Daily.count)   # Specify min of first y axis
@@ -74,30 +120,6 @@ plot <- Data %>%
   scale_y_continuous(limits = c(min_first, max_first), sec.axis = sec_axis(~scale_function(., scale, shift)))
 plot
 
-
-# Working on developing an inline scaling function that responds to filtered datasets
-# inline_scale_fnct<- function(){
-#   max_first  <- max(Data$Daily.count)   # Specify max of first y axis
-#   max_second <- max(Data$Flow_Inst) # Specify max of second y axis
-#   min_first  <- min(Data$Daily.count)   # Specify min of first y axis
-#   min_second <- min(Data$Flow_Inst) # Specify min of second y axis
-#   scale = (max_second - min_second)/(max_first - min_first)
-#   shift = min_first - min_second
-#   Flow_Inst = Data$Flow_Inst 
-#   inv_scale_function <- function (Flow_Inst, scale, shift) {
-#     return ((Flow_Inst + shift)/scale)
-#   }
-#   inv_scale_function()
-# }
-
-# plot <- Data %>%
-#   filter(Month == 11) %>% 
-#   ggplot(aes(x = Date, y = Daily.count)) +
-#   geom_point() +
-#   geom_line(aes(y = inline_scale_fnct())) +
-#   scale_y_continuous(limits = c(min_first, max_first), sec.axis = sec_axis(~scale_function(., scale, shift)))
-# plot
-# 
 
 
 
