@@ -56,8 +56,21 @@ Dat[27+24,3] #24hours post
 
 mean(c(Dat[27-24,3],Dat[27+24,3]))
 
+which(is.na(Dat),arr.ind = T)[1]
+
+#attempt 1
+lapply(Dat[,3] ,function(x){
+  if_else(is.na(x), mean(c(Dat[x-24,3],Dat[x+24,3])),x) #Does not replace the missing value. The issue is due to trying to subtract a value from and NA
+})
+
+#attempt 2
+lapply(Dat[,3], function(x){
+  if_else(is.na(x), Dat[x,]<- mean(c(Dat[x-24,3],Dat[x+24,3])),x) #Does not work because the Dat[x,] references a values that is NA
+})
+
+#attempt 3
 Dat$new.net<- sapply(Dat[,3],function(x)
-  if_else(is.na(x), mean(c(Dat[which(is.na(Dat),arr.ind = T)[1]-24,3],Dat[which(is.na(Dat),arr.ind = T)[1]+24,3])),x) 
+  if_else(is.na(x), mean(c(Dat[which(is.na(Dat),arr.ind = T)[1]-24,3],Dat[which(is.na(Dat),arr.ind = T)[1]+24,3])),x)) 
 
 
 
