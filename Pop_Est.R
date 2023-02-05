@@ -54,11 +54,11 @@ Dat[27,3]<- NA
 
 # Basic function that will fill in missing NA values with the average of the value 24hrs before and after the missing 
 #  Error: Currently the function is pasting the same value for all missing NAs. Need this to treat things on a case by case basis
+# 
+# Dat$new.net<- sapply(Dat[,3],function(x)  # original
+#   if_else(is.na(x), mean(c(Dat[which(is.na(Dat),arr.ind = T)[1]-24,3],Dat[which(is.na(Dat),arr.ind = T)[1]+24,3])),x)) 
 
-Dat$new.net<- sapply(Dat[,3],function(x)  # original
-  if_else(is.na(x), mean(c(Dat[which(is.na(Dat),arr.ind = T)[1]-24,3],Dat[which(is.na(Dat),arr.ind = T)[1]+24,3])),x)) 
-
-Dat$new.net<- sapply(Dat[,3],function(x)  # Works
+Dat$new.net<- apply(Dat,2,function(x)  # Figure out why the above function above. 
   if_else(is.na(x), mean(c(Dat[which(is.na(Dat),arr.ind = T)[1]-24,3],Dat[which(is.na(Dat),arr.ind = T)[1]+24,3])),x)) 
 
 #Scenario 2: if there are NA values in 24hrs before or after the missing hour. 
