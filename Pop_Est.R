@@ -58,8 +58,11 @@ Dat[27,3]<- NA
 # Dat$new.net<- sapply(Dat[,3],function(x)  # original
 #   if_else(is.na(x), mean(c(Dat[which(is.na(Dat),arr.ind = T)[1]-24,3],Dat[which(is.na(Dat),arr.ind = T)[1]+24,3])),x)) 
 
-Dat$new.net<- apply(Dat,2,function(x)  # Figure out why the above function above. 
-  if_else(is.na(x), mean(c(Dat[which(is.na(Dat),arr.ind = T)[1]-24,3],Dat[which(is.na(Dat),arr.ind = T)[1]+24,3])),x)) 
+Dat$new.net<- sapply(Dat[,3],function(x)  #  
+  if_else(is.na(x), mean(c(Dat[which(is.na(Dat),arr.ind = T)[x]-24,3],Dat[which(is.na(Dat),arr.ind = T)[x]+24,3])),x)) 
+
+# The problem is that I am calling Dat[...][1] which is making the answer the same for all values 
+
 
 #Scenario 2: if there are NA values in 24hrs before or after the missing hour. 
 #             take the un-adjusted daily count and add in an adjustement for the missing hours E.adj = E.unadj + (E.unadj * z/24hrs)     # Step 2
@@ -78,6 +81,7 @@ Dat<- data.frame(Day= Day,Hour= Hour,Net= Net)
 Dat[27,3]<- NA
 Dat[3,3]<- NA
 Dat[51,3]<- NA
+Dat[21,3]<- NA
 
 #Scaling up the observations 
 Dat<- Dat %>% 
