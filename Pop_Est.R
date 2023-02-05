@@ -53,12 +53,13 @@ Dat<- data.frame(Day= Day,Hour= Hour,Net= Net)
 Dat[27,3]<- NA
 
 # Basic function that will fill in missing NA values with the average of the value 24hrs before and after the missing 
-Dat$new.net<- sapply(Dat[,3],function(x)  # Works if there is only one NA value in the data set. 
+#  Error: Currently the function is pasting the same value for all missing NAs. Need this to treat things on a case by case basis
+
+Dat$new.net<- sapply(Dat[,3],function(x)  # original
   if_else(is.na(x), mean(c(Dat[which(is.na(Dat),arr.ind = T)[1]-24,3],Dat[which(is.na(Dat),arr.ind = T)[1]+24,3])),x)) 
 
-
-
-
+Dat$new.net<- sapply(Dat[,3],function(x)  # Works
+  if_else(is.na(x), mean(c(Dat[which(is.na(Dat),arr.ind = T)[1]-24,3],Dat[which(is.na(Dat),arr.ind = T)[1]+24,3])),x)) 
 
 #Scenario 2: if there are NA values in 24hrs before or after the missing hour. 
 #             take the un-adjusted daily count and add in an adjustement for the missing hours E.adj = E.unadj + (E.unadj * z/24hrs)     # Step 2
@@ -151,7 +152,7 @@ Dat[3,4]<- NA
 Dat[49:96,4]<- NA
 
 # Accounting for single hours down
-Dat$new.Net<- sapply(Dat[,'Net'],function(x)
+Dat$new.Net<- sapply(Dat[,4],function(x)
   if_else(is.na(x), mean(c(Dat[which(is.na(Dat),arr.ind = T)[1]-24,3],Dat[which(is.na(Dat),arr.ind = T)[1]+24,3])),x)) 
 
 
