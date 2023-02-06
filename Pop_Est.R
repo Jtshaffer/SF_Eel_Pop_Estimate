@@ -31,34 +31,46 @@ Data<- Data %>%
 
 
 
-#To do: Create a function that looks at the dataset and fills in the NA values based on set rules. 
-
-
 # Correcting the NA values
-
-
-
-
-
-
 # Scenario 1: if there is an NA then take the average of the net movement 24 hours prior and 24 hours after  # Step 1
-set.seed(1)
 
+#  Error: Currently the function is pasting the same value for all missing NAs. Need this to treat things on a case by case basis
+# The problem is that I am calling Dat[...][1] which is making the answer the same for all values 
+#  Need to find a way to reference the cell location of x 
+# Solved in section 1a
+
+# Dat$new.net<- sapply(Dat[,3],function(x)  # original
+#   if_else(is.na(x), mean(c(Dat[which(is.na(Dat),arr.ind = T)[1]-24,3],Dat[which(is.na(Dat),arr.ind = T)[1]+24,3])),x)) 
+
+
+#Senario 1a: If there are multiple NA values
 #Data Creation
 Day1<- rep(1,24)
 Day2<- rep(2,24)
 Day3<- rep(3,24)
 Day<- c(Day1,Day2,Day3)
-
-Hour<- rep(1:24,3)
+Hour<- rep(0:23,3)
 Net <- round(rnorm(length(Day),mean = 2))
-
 Dat<- data.frame(Day= Day,Hour= Hour,Net= Net)
-Dat[27,3]<- NA
 
-# Basic function that will fill in missing NA values with the average of the value 24hrs before and after the missing 
-Dat$new.net<- sapply(Dat[,3],function(x)
-  if_else(is.na(x), mean(c(Dat[which(is.na(Dat),arr.ind = T)[1]-24,3],Dat[which(is.na(Dat),arr.ind = T)[1]+24,3])),x)) 
+#Populate missing observations
+Dat[27,3]<- NA
+Dat[31,3]<- NA
+Dat
+
+Dat$New.net <- Dat[,3]
+
+
+#Solution
+
+ind <- which(is.na(Dat[[3]]))
+ind_minus <- ind - 24
+ind_minus[ind_minus < 1] <- NA
+ind_plus <- ind + 24
+ind_plus[ind_plus > nrow(Dat)] <- NA
+
+Dat[[4]][ind] <- rowMeans(cbind(Dat[[4]][ind_minus], Dat[[4]][ind_plus]),
+                          na.rm = TRUE)
 
 
 
@@ -72,15 +84,15 @@ Day2<- rep(2,24)
 Day3<- rep(3,24)
 Day<- c(Day1,Day2,Day3)
 
-Hour<- rep(1:24,3)
+Hour<- rep(0:23,3)
 Net <- round(rnorm(length(Day),mean = 2))
 
 Dat<- data.frame(Day= Day,Hour= Hour,Net= Net)
 Dat[27,3]<- NA
 Dat[3,3]<- NA
 Dat[51,3]<- NA
-
-
+Dat[31,3]<- NA
+Dat
 #Scaling up the observations 
 Dat<- Dat %>% 
   mutate(hnet= Net*6) 
@@ -94,8 +106,6 @@ pre.adj<- Dat %>%
 # The daily counts adjusted for missing hours 
 post.adj<- pre.adj %>% 
   mutate(corected.dailynet = Dailynet + (Dailynet*correctionfactor))
-
-
 
 #Scenario 3: build in the adjustment for missing consecutive days in a month
 set.seed(1)
@@ -120,20 +130,55 @@ Dat[49:96,4]<- NA
 Dat<- Dat %>% 
   mutate(hnet= Net*6) 
 
-
 #Adding in correction factor and daily net movement and then correcting the daily net movement
 day.adj<- Dat %>% 
   group_by(Month,Day) %>% 
   summarise(Dailynet= sum(hnet,na.rm = T),missinghrs=sum(is.na(Net))) %>% 
   mutate(daycorrectionfactor= missinghrs/24, cor.day.net = Dailynet + (Dailynet*daycorrectionfactor))
 
-
-
 #Adding in the monthly correction factor and monthly net movement then correcting the monthly movement
 month.adj<- day.adj %>% 
   group_by(Month) %>% 
   summarise(monthlynet= sum(cor.day.net,na.rm = T), missing_day_vals= n_distinct(which(cor.day.net == 0.00))) %>% 
   mutate(monthcorrectionfactor= missing_day_vals/length(Day), cor.month.net= round(monthlynet + (monthlynet*monthcorrectionfactor ) ))
+
+
+
+# Combine the three scenarios 
+
+set.seed(1)
+#Data Creation
+Day1<- rep(1,24)
+Day2<- rep(2,24)
+Day3<- rep(3,24)
+Day4<- rep(4,24)
+Day5<- rep(5,24)
+Day6<- rep(6,24)
+Day<- c(Day1,Day2,Day3,Day4,Day5,Day6)
+
+Hour<- rep(1:24,6)
+Month<- rep(1,length(Day))
+Net <- round(rnorm(length(Day),mean = 2))
+
+Dat<- data.frame(Month= Month, Day= Day,Hour= Hour,Net= Net)
+Dat[27,4]<- NA
+Dat[3,4]<- NA
+Dat[49:96,4]<- NA
+
+# Accounting for single hours down
+Dat$new.Net<- sapply(Dat[,4],function(x)
+  if_else(is.na(x), mean(c(Dat[which(is.na(Dat),arr.ind = T)[1]-24,3],Dat[which(is.na(Dat),arr.ind = T)[1]+24,3])),x)) 
+
+
+Dat<- Dat %>% 
+  mutate(hnet= Net*6) 
+
+
+
+
+
+
+
 
 
 
