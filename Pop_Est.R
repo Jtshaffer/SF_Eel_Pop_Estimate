@@ -74,22 +74,28 @@ Dat[27,3]<- NA
 Dat[31,3]<- NA
 Dat
 
-Dat$new.net<- na.approx(Dat[,3])
+Dat$New.net <- Dat[,3]
 
+
+#Solution
+
+ind <- which(is.na(Dat[[3]]))
+ind_minus <- ind - 24
+ind_minus[ind_minus < 1] <- NA
+ind_plus <- ind + 24
+ind_plus[ind_plus > nrow(Dat)] <- NA
+
+Dat[[4]][ind] <- rowMeans(cbind(Dat[[4]][ind_minus], Dat[[4]][ind_plus]),
+                          na.rm = TRUE)
+
+
+
+
+# My original function
 Dat$new.net<-sapply(Dat[,3],function(x)  
   ifelse(is.na(x), mean(c(Dat[which(Dat[,3]==x,arr.ind = T)[1]-24,3],Dat[which(x,arr.ind = T)[1]+24,3])),x))
 
 
-
-
-# Complicated attempt That filters out the first 24 and last 24 rows. 
-Dat$new.net<- sapply(Dat[,3],function(x)
-  if_else(is.na(x) & !row_number(x) %in% rownames(head(Dat,24)) & !row_number(x) %in% rownames(tail(Dat,24))),
-  mean(c( Dat[ which(Dat[,3] == rownames(x), arr.ind = T )-24,3],Dat[which(Dat[,3]== rownames(x),arr.ind = T)[x]+24,3])),
-     x) 
-
-library(zoo)
-?na.approx
 
 #Scenario 2: if there are NA values in 24hrs before or after the missing hour. 
 #             take the un-adjusted daily count and add in an adjustement for the missing hours E.adj = E.unadj + (E.unadj * z/24hrs)     # Step 2
