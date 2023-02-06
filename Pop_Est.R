@@ -43,7 +43,7 @@ Data<- Data %>%
 #   if_else(is.na(x), mean(c(Dat[which(is.na(Dat),arr.ind = T)[1]-24,3],Dat[which(is.na(Dat),arr.ind = T)[1]+24,3])),x)) 
 
 
-#Senario 1a: If there are multiple NA values
+#Senario 1a: If there are multiple NA values ----
 #Data Creation
 Day1<- rep(1,24)
 Day2<- rep(2,24)
@@ -74,40 +74,40 @@ Dat[[4]][ind] <- rowMeans(cbind(Dat[[4]][ind_minus], Dat[[4]][ind_plus]),
 
 
 
-#Scenario 2: if there are NA values in 24hrs before or after the missing hour. 
+#Scenario 2: if there are NA values in 24hrs before or after the missing hour.  # No longer  needed as it is in scenario 3 ----
 #             take the un-adjusted daily count and add in an adjustement for the missing hours E.adj = E.unadj + (E.unadj * z/24hrs)     # Step 2
-set.seed(1)
+# set.seed(1)
+# 
+# #Data Creation
+# Day1<- rep(1,24)
+# Day2<- rep(2,24)
+# Day3<- rep(3,24)
+# Day<- c(Day1,Day2,Day3)
+# 
+# Hour<- rep(0:23,3)
+# Net <- round(rnorm(length(Day),mean = 2))
+# 
+# Dat<- data.frame(Day= Day,Hour= Hour,Net= Net)
+# Dat[27,3]<- NA
+# Dat[3,3]<- NA
+# Dat[51,3]<- NA
+# Dat[31,3]<- NA
+# Dat
+# #Scaling up the observations 
+# Dat<- Dat %>% 
+#   mutate(hnet= Net*6) 
+# 
+# #Adding in correction factor and daily net movement
+# pre.adj<- Dat %>% 
+#   group_by(Day) %>% 
+#   summarise(Dailynet= sum(hnet,na.rm = T),missingvals=sum(is.na(Net))) %>% 
+#   mutate(correctionfactor= missingvals/24)
+# 
+# # The daily counts adjusted for missing hours 
+# post.adj<- pre.adj %>% 
+#   mutate(corected.dailynet = Dailynet + (Dailynet*correctionfactor))
 
-#Data Creation
-Day1<- rep(1,24)
-Day2<- rep(2,24)
-Day3<- rep(3,24)
-Day<- c(Day1,Day2,Day3)
-
-Hour<- rep(0:23,3)
-Net <- round(rnorm(length(Day),mean = 2))
-
-Dat<- data.frame(Day= Day,Hour= Hour,Net= Net)
-Dat[27,3]<- NA
-Dat[3,3]<- NA
-Dat[51,3]<- NA
-Dat[31,3]<- NA
-Dat
-#Scaling up the observations 
-Dat<- Dat %>% 
-  mutate(hnet= Net*6) 
-
-#Adding in correction factor and daily net movement
-pre.adj<- Dat %>% 
-  group_by(Day) %>% 
-  summarise(Dailynet= sum(hnet,na.rm = T),missingvals=sum(is.na(Net))) %>% 
-  mutate(correctionfactor= missingvals/24)
-
-# The daily counts adjusted for missing hours 
-post.adj<- pre.adj %>% 
-  mutate(corected.dailynet = Dailynet + (Dailynet*correctionfactor))
-
-#Scenario 3: build in the adjustment for missing consecutive days in a month
+#Scenario 3: build in the adjustment for missing consecutive days in a month ----
 set.seed(1)
 #Data Creation
 Day1<- rep(1,24)
@@ -125,7 +125,7 @@ Net <- round(rnorm(length(Day),mean = 2))
 Dat<- data.frame(Month= Month, Day= Day,Hour= Hour,Net= Net)
 Dat[27,4]<- NA
 Dat[3,4]<- NA
-Dat[49:96,4]<- NA
+Dat[49:120,4]<- NA
 
 Dat<- Dat %>% 
   mutate(hnet= Net*6) 
@@ -144,7 +144,7 @@ month.adj<- day.adj %>%
 
 
 
-# Combine the three scenarios 
+# Combine the three scenarios ----
 
 set.seed(1)
 #Data Creation
@@ -163,18 +163,44 @@ Net <- round(rnorm(length(Day),mean = 2))
 Dat<- data.frame(Month= Month, Day= Day,Hour= Hour,Net= Net)
 Dat[27,4]<- NA
 Dat[3,4]<- NA
-Dat[49:96,4]<- NA
+Dat[49:120,4]<- NA
 
-# Accounting for single hours down
-Dat$new.Net<- sapply(Dat[,4],function(x)
-  if_else(is.na(x), mean(c(Dat[which(is.na(Dat),arr.ind = T)[1]-24,3],Dat[which(is.na(Dat),arr.ind = T)[1]+24,3])),x)) 
+#Insert sample of random missing values
+ind <- which(Dat$Net %in% sample(Dat$Net, 5))
+Dat$Net[ind]<-NA
+
+
+
+
+## Accounting for single hours down ----
+
+Dat$New.Net<- Dat[["Net"]]
+ind <- which(is.na(Dat[["Net"]]))
+ind_minus <- ind - 24
+ind_minus[ind_minus < 1] <- NA
+ind_plus <- ind + 24
+ind_plus[ind_plus > nrow(Dat)] <- NA
+
+Dat[["New.Net"]][ind] <- rowMeans(cbind(Dat[["New.Net"]][ind_minus], Dat[["New.Net"]][ind_plus]),
+                          na.rm = TRUE)
 
 
 Dat<- Dat %>% 
-  mutate(hnet= Net*6) 
+  mutate(hnet= New.Net*6) 
 
 
+#Adding in correction factor and daily net movement and then correcting the daily net movement
+day.adj<- Dat %>% 
+  group_by(Month,Day) %>% 
+  summarise(Dailynet= sum(hnet,na.rm = T), missinghrs=sum(is.na(hnet))) %>% 
+  mutate(daycorrectionfactor= missinghrs/24, corrected.day.net = Dailynet + (Dailynet*daycorrectionfactor))
 
+
+#Adding in the monthly correction factor and monthly net movement then correcting the monthly movement
+month.adj<- day.adj %>% 
+  group_by(Month) %>% 
+  summarise(monthlynet= sum(corrected.day.net,na.rm = T), missing_day_vals= n_distinct(which(corrected.day.net == 0.00))) %>% 
+  mutate(monthcorrectionfactor= missing_day_vals/length(Day), cor.month.net= round(monthlynet + (monthlynet*monthcorrectionfactor ) ))
 
 
 
