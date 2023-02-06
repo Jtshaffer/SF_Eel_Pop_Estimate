@@ -45,24 +45,51 @@ Day1<- rep(1,24)
 Day2<- rep(2,24)
 Day3<- rep(3,24)
 Day<- c(Day1,Day2,Day3)
-
 Hour<- rep(1:24,3)
 Net <- round(rnorm(length(Day),mean = 2))
-
 Dat<- data.frame(Day= Day,Hour= Hour,Net= Net)
 Dat[27,3]<- NA
 
 # Basic function that will fill in missing NA values with the average of the value 24hrs before and after the missing 
 #  Error: Currently the function is pasting the same value for all missing NAs. Need this to treat things on a case by case basis
-# 
+# The problem is that I am calling Dat[...][1] which is making the answer the same for all values 
+#  Need to find a way to reference the cell location of x 
+
 # Dat$new.net<- sapply(Dat[,3],function(x)  # original
 #   if_else(is.na(x), mean(c(Dat[which(is.na(Dat),arr.ind = T)[1]-24,3],Dat[which(is.na(Dat),arr.ind = T)[1]+24,3])),x)) 
 
-Dat$new.net<- sapply(Dat[,3],function(x)  #  
-  if_else(is.na(x), mean(c(Dat[which(is.na(Dat),arr.ind = T)[x]-24,3],Dat[which(is.na(Dat),arr.ind = T)[x]+24,3])),x)) 
 
-# The problem is that I am calling Dat[...][1] which is making the answer the same for all values 
+#Senario 1a: If there are multiple NA values
+#Data Creation
+Day1<- rep(1,24)
+Day2<- rep(2,24)
+Day3<- rep(3,24)
+Day<- c(Day1,Day2,Day3)
+Hour<- rep(0:23,3)
+Net <- round(rnorm(length(Day),mean = 2))
+Dat<- data.frame(Day= Day,Hour= Hour,Net= Net)
 
+#Populate missing observations
+Dat[27,3]<- NA
+Dat[31,3]<- NA
+Dat
+
+Dat$new.net<- na.approx(Dat[,3])
+
+Dat$new.net<-sapply(Dat[,3],function(x)  
+  ifelse(is.na(x), mean(c(Dat[which(Dat[,3]==x,arr.ind = T)[1]-24,3],Dat[which(x,arr.ind = T)[1]+24,3])),x))
+
+
+
+
+# Complicated attempt That filters out the first 24 and last 24 rows. 
+Dat$new.net<- sapply(Dat[,3],function(x)
+  if_else(is.na(x) & !row_number(x) %in% rownames(head(Dat,24)) & !row_number(x) %in% rownames(tail(Dat,24))),
+  mean(c( Dat[ which(Dat[,3] == rownames(x), arr.ind = T )-24,3],Dat[which(Dat[,3]== rownames(x),arr.ind = T)[x]+24,3])),
+     x) 
+
+library(zoo)
+?na.approx
 
 #Scenario 2: if there are NA values in 24hrs before or after the missing hour. 
 #             take the un-adjusted daily count and add in an adjustement for the missing hours E.adj = E.unadj + (E.unadj * z/24hrs)     # Step 2
@@ -74,15 +101,15 @@ Day2<- rep(2,24)
 Day3<- rep(3,24)
 Day<- c(Day1,Day2,Day3)
 
-Hour<- rep(1:24,3)
+Hour<- rep(0:23,3)
 Net <- round(rnorm(length(Day),mean = 2))
 
 Dat<- data.frame(Day= Day,Hour= Hour,Net= Net)
 Dat[27,3]<- NA
 Dat[3,3]<- NA
 Dat[51,3]<- NA
-Dat[21,3]<- NA
-
+Dat[31,3]<- NA
+Dat
 #Scaling up the observations 
 Dat<- Dat %>% 
   mutate(hnet= Net*6) 
