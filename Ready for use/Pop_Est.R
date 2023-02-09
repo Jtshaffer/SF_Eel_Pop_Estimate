@@ -1,35 +1,24 @@
 
-# Backup of the scrip to produce the population abundance estimates for the south fork eel didson station. JTS 2023
+# Scrip to produce the population abundance estimates for the south fork eel DIDSON station at Meyers flat - JTS 2023
+
+require(tidyverse)
+require(lubridate)
+require(dataRetrieval)
+source("Missing_Hours_fxn.R")
+source("Size_correction_fxn.R")
+
 Data<- as.data.frame(readxl::read_xlsx("E:/CalTrout/SF_Eel_Didson/Review Data/Review_Data-01-13-23.xlsx"))
 Data<- Data %>% 
-  #mutate(Hnet = Net * 6) %>% 
   mutate(Date = paste(Year,Month,Day,Hour, sep = "-")) %>% 
   mutate(Date = ymd_h(Date))
 
 
-Data$lessthan40<- apply(Data[8:27],1,function(x){  # Function to remove the counts that are less than 40cm and correct the net counts
-  sum(x < 40,na.rm = T)
-}
-)    
+# Remove the counts that are less than 40cm and correcting the net counts
+Data<-Size_correction(Data)
 
-Data<- Data %>% 
-  mutate(Net.corrected = Net - lessthan40)  
 
 ## Accounting for single hours down ----
-
-Data$New.Net<- Data[["Net.corrected"]]
-ind <- which(is.na(Data[["Net.corrected"]]))
-ind_minus <- ind - 24
-ind_minus[ind_minus < 1] <- NA
-ind_plus <- ind + 24
-ind_plus[ind_plus > nrow(Data)] <- NA
-
-Data[["New.Net"]][ind] <- rowMeans(cbind(Data[["New.Net"]][ind_minus], Data[["New.Net"]][ind_plus]),
-                                   na.rm = TRUE)
-
-
-Data<- Data %>% 
-  mutate(hnet= New.Net*6) 
+Data<- Missing_Hours(Data)
 
 
 #Adding in correction factor and daily net movement and then correcting the daily net movement
