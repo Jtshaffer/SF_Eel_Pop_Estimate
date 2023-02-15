@@ -3,6 +3,8 @@ library(tidyverse)
 library(lubridate)
 library(dataRetrieval)
 
+
+
 # Randomly interject NA values to a data frame
 #source("NA_Value_Creator.R")
 
@@ -79,7 +81,7 @@ Dat[[4]][ind] <- rowMeans(cbind(Dat[[4]][ind_minus], Dat[[4]][ind_plus]),
 
 
 #Scenario 2: if there are NA values in 24hrs before or after the missing hour.  # No longer  needed as it is in scenario 3 ----
-#             take the un-adjusted daily count and add in an adjustement for the missing hours E.adj = E.unadj + (E.unadj * z/24hrs)     # Step 2
+#             take the un-adjusted daily count and add in an adjustement for the missing hours E.adj = E.unadj + (E.unadj * z/24)     # Step 2
 # set.seed(1)
 # 
 # #Data Creation
@@ -212,20 +214,36 @@ Data<- Data %>%
 
 
 #Adding in correction factor and daily net movement and then correcting the daily net movement
-day.adj<- Data %>% 
-  group_by(Year,Month,Day) %>% 
-  summarise(Dailynet= sum(hnet,na.rm = T), missinghrs=sum(is.na(hnet))) %>% 
-  mutate(daycorrectionfactor= missinghrs/24, corrected.day.net = Dailynet + (Dailynet*daycorrectionfactor)) %>% 
-  ungroup()
+#Building in a function to note if one ten-minute file or two ten-minute files have been reviewed. 
 
+day.adj<-function(Data= X, twenty_min_file = T){
+  if(twenty_min_file == T){ 
+          Data %>% 
+            group_by(Year,Month,Day) %>% 
+            summarise(Dailynet= sum(hnet,na.rm = T), missinghrs=sum(is.na(hnet))) %>% 
+            mutate(daycorrectionfactor= missinghrs/48, corrected.day.net = Dailynet + (Dailynet*daycorrectionfactor)) %>% 
+            ungroup()}
+  else{
+          Data %>% 
+            group_by(Year,Month,Day) %>% 
+            summarise(Dailynet= sum(hnet,na.rm = T), missinghrs=sum(is.na(hnet))) %>% 
+            mutate(daycorrectionfactor= missinghrs/24, corrected.day.net = Dailynet + (Dailynet*daycorrectionfactor)) %>% 
+            ungroup()}
+  
+}
+
+
+day.adj()
+
+day_adj<- day.adj(Data = Data,F)
 
 #Adding in the monthly correction factor and monthly net movement then correcting the monthly movement
-days.per.month<- day.adj %>% 
+days.per.month<- day_adj %>% 
   group_by(Month) %>% 
   summarise(length(Day))
 
 
-month.adj<- day.adj %>% 
+month_adj<- day_adj %>% 
   group_by(Month) %>% 
   summarise(monthlynet= sum(corrected.day.net,na.rm = T), missing_day_vals= n_distinct(which(corrected.day.net == 0.00))) %>% 
   mutate(monthcorrectionfactor= missing_day_vals/days.per.month[2], cor.month.net= round(monthlynet + (monthlynet*monthcorrectionfactor ))) %>% 
