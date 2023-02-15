@@ -3,10 +3,10 @@ library(tidyverse)
 library(lubridate)
 library(dataRetrieval)
 
-# Means to randomly interject NA values to a data frame
+# Randomly interject NA values to a data frame
 #source("NA_Value_Creator.R")
 
-#Way to randomly interject NA values to a vector
+# Randomly interject NA values to a vector
 # ind <- which(foo %in% sample(foo, 15))
 # #now replace those indices in foo with NA
 # foo[ind]<-NA
@@ -42,12 +42,15 @@ Data<- Data %>%
 #   if_else(is.na(x), mean(c(Dat[which(is.na(Dat),arr.ind = T)[1]-24,3],Dat[which(is.na(Dat),arr.ind = T)[1]+24,3])),x)) 
 
 
-#Senario 1a: If there are multiple NA values ----
+#Senario 1a: If there are multiple NA values and missing days  ----  # If there is 1 missing value have the test fail
 #Data Creation
 Day1<- rep(1,24)
 Day2<- rep(2,24)
 Day3<- rep(3,24)
-Day<- c(Day1,Day2,Day3)
+Day4<- rep(4,24)
+Day5<- rep(5,24)
+Day6<- rep(6,24)
+Day<- c(Day1,Day2,Day3,Day4,Day5,Day6)
 Hour<- rep(0:23,3)
 Net <- round(rnorm(length(Day),mean = 2))
 Dat<- data.frame(Day= Day,Hour= Hour,Net= Net)
@@ -55,6 +58,8 @@ Dat<- data.frame(Day= Day,Hour= Hour,Net= Net)
 #Populate missing observations
 Dat[27,3]<- NA
 Dat[31,3]<- NA
+Dat[49:120,3]<- NA
+
 Dat
 
 Dat$New.net <- Dat[,3]
@@ -69,7 +74,7 @@ ind_plus <- ind + 24
 ind_plus[ind_plus > nrow(Dat)] <- NA
 
 Dat[[4]][ind] <- rowMeans(cbind(Dat[[4]][ind_minus], Dat[[4]][ind_plus]),
-                          na.rm = TRUE)
+                          na.rm = F)
 
 
 
@@ -117,7 +122,7 @@ Day5<- rep(5,24)
 Day6<- rep(6,24)
 Day<- c(Day1,Day2,Day3,Day4,Day5,Day6)
 
-Hour<- rep(1:24,6)
+Hour<- rep(0:23,6)
 Month<- rep(1,length(Day))
 Net <- round(rnorm(length(Day),mean = 2))
 
@@ -145,48 +150,50 @@ month.adj<- day.adj %>%
 
 # Combine the three scenarios ----
 
-set.seed(1)
-#Data Creation
-Day1<- rep(1,24)
-Day2<- rep(2,24)
-Day3<- rep(3,24)
-Day4<- rep(4,24)
-Day5<- rep(5,24)
-Day6<- rep(6,24)
-Day<- c(Day1,Day2,Day3,Day4,Day5,Day6)
+#Example data 
+# set.seed(1)
+# #Data Creation
+# Day1<- rep(1,24)
+# Day2<- rep(2,24)
+# Day3<- rep(3,24)
+# Day4<- rep(4,24)
+# Day5<- rep(5,24)
+# Day6<- rep(6,24)
+# Day<- c(Day1,Day2,Day3,Day4,Day5,Day6)
+# 
+# Hour<- rep(1:24,6)
+# Month<- rep(1,length(Day))
+# Net <- round(rnorm(length(Day),mean = 2))
+# 
+# Dat<- data.frame(Month= Month, Day= Day,Hour= Hour,Net= Net)
+# Dat[27,4]<- NA
+# Dat[3,4]<- NA
+# Dat[49:120,4]<- NA
+# 
+# #Insert sample of random missing values
+# ind <- which(Dat$Net %in% sample(Dat$Net, 5))
+# Dat$Net[ind]<-NA
+# 
+# Data<-Dat
+# Data$Net.corrected<-Data$Net
 
-Hour<- rep(1:24,6)
-Month<- rep(1,length(Day))
-Net <- round(rnorm(length(Day),mean = 2))
-
-Dat<- data.frame(Month= Month, Day= Day,Hour= Hour,Net= Net)
-Dat[27,4]<- NA
-Dat[3,4]<- NA
-Dat[49:120,4]<- NA
-
-#Insert sample of random missing values
-ind <- which(Dat$Net %in% sample(Dat$Net, 5))
-Dat$Net[ind]<-NA
-
-
-
-# Trial on all currently available data ----
+#Trial on all currently available data ----
 
 Data<- as.data.frame(readxl::read_xlsx("E:/CalTrout/SF_Eel_Didson/Review Data/Review_Data-01-13-23.xlsx"))
-Data<- Data %>% 
-  #mutate(Hnet = Net * 6) %>% 
-  mutate(Date = paste(Year,Month,Day,Hour, sep = "-")) %>% 
+Data<- Data %>%
+  #mutate(Hnet = Net * 6) %>%
+  mutate(Date = paste(Year,Month,Day,Hour, sep = "-")) %>%
   mutate(Date = ymd_h(Date))
 
-  
+
 Data$lessthan40<- apply(Data[8:27],1,function(x){  # Function to remove the counts that are less than 40cm and correct the net counts
     sum(x < 40,na.rm = T)
   }
-  )    
-  
-Data<- Data %>% 
-    mutate(Net.corrected = Net - lessthan40)  
-  
+  )
+
+Data<- Data %>%
+    mutate(Net.corrected = Net - lessthan40)
+
 ## Accounting for single hours down ----
 
 Data$New.Net<- Data[["Net.corrected"]]
@@ -223,10 +230,6 @@ month.adj<- day.adj %>%
   summarise(monthlynet= sum(corrected.day.net,na.rm = T), missing_day_vals= n_distinct(which(corrected.day.net == 0.00))) %>% 
   mutate(monthcorrectionfactor= missing_day_vals/days.per.month[2], cor.month.net= round(monthlynet + (monthlynet*monthcorrectionfactor ))) %>% 
   ungroup()
-
-
-
-
 
 
 

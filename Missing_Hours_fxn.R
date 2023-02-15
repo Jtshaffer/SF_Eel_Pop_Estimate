@@ -7,7 +7,7 @@ Missing_Hours<- function(Data= Data){
   ind_plus[ind_plus > nrow(Data)] <- NA
   
   Data[["New.Net"]][ind] <- rowMeans(cbind(Data[["New.Net"]][ind_minus], Data[["New.Net"]][ind_plus]),
-                                     na.rm = TRUE)
+                                     na.rm = F)
   Data<- Data %>% 
     mutate(hnet= New.Net*6) 
 }
