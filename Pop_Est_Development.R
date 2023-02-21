@@ -114,6 +114,7 @@ Dat[[4]][ind] <- rowMeans(cbind(Dat[[4]][ind_minus], Dat[[4]][ind_plus]),
 #   mutate(corected.dailynet = Dailynet + (Dailynet*correctionfactor))
 
 #Scenario 3: build in the adjustment for missing consecutive days in a month ----
+# Building in a variance estimator ----
 set.seed(1)
 #Data Creation
 Day1<- rep(1,24)
@@ -122,16 +123,23 @@ Day3<- rep(3,24)
 Day4<- rep(4,24)
 Day5<- rep(5,24)
 Day6<- rep(6,24)
-Day<- c(Day1,Day2,Day3,Day4,Day5,Day6)
+Day7<- rep(7,24)
+Day8<- rep(8,24)
+Day9<- rep(9,24)
+Day10<- rep(10,24)
+Day11<- rep(11,24)
+Day<- c(Day1,Day2,Day3,Day4,Day5,Day6,Day7,Day8,Day9,Day10,Day11)
 
-Hour<- rep(0:23,6)
+Hour<- rep(0:23,11)
 Month<- rep(1,length(Day))
-Net <- round(rnorm(length(Day),mean = 2))
+Net <- round(rnorm(length(Day),mean = 10,sd = 3.5))
 
 Dat<- data.frame(Month= Month, Day= Day,Hour= Hour,Net= Net)
 Dat[27,4]<- NA
 Dat[3,4]<- NA
 Dat[49:120,4]<- NA
+ind <- which(Dat$Net %in% sample(Dat$Net, replace = F,1))
+Dat$Net[ind]<-NA
 
 Dat<- Dat %>% 
   mutate(hnet= Net*6) 
@@ -147,6 +155,21 @@ month.adj<- day.adj %>%
   group_by(Month) %>% 
   summarise(monthlynet= sum(cor.day.net,na.rm = T), missing_day_vals= n_distinct(which(cor.day.net == 0.00))) %>% 
   mutate(monthcorrectionfactor= missing_day_vals/length(Day), cor.month.net= round(monthlynet + (monthlynet*monthcorrectionfactor ) ))
+
+
+
+#Variance estimator
+
+f<- 1/6 # The proportion of possible observations that were collected
+n<- length(day.adj$Day) # number of sample days
+
+y_bar<- round(sum(day.adj$cor.day.net/n)) #Daily mean escapement (sum(y_sub_i)/n)
+
+
+
+
+
+
 
 
 

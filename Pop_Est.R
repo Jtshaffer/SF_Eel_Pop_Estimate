@@ -9,11 +9,12 @@ source("Size_correction_fxn.R")
 source("Missing_Day_fxn.R")
 
 
-Data<- as.data.frame(readxl::read_xlsx("E:/CalTrout/SF_Eel_Didson/Review Data/Review_Data-01-13-23.xlsx"))
+Data<- as.data.frame(readxl::read_xlsx("E:/CalTrout/SF_Eel_Didson/Review Data/Review_Data-02-20-23.xlsx"))
 Data<- Data %>% 
   mutate(Date = paste(Year,Month,Day,Hour, sep = "-")) %>% 
   mutate(Date = ymd_h(Date))
-
+Data<-Data %>% 
+  filter(!Hour %in% seq(0.5,23.5,1))
 
 # Obtain USGS data for site of interest. URL to helpful page: https://waterdata.usgs.gov/blog/dataretrieval/
 siteNo<- "11476500" # location code for Miranda
