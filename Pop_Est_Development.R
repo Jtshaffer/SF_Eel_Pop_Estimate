@@ -158,14 +158,99 @@ month.adj<- day.adj %>%
 
 
 
-#Variance estimator
+#Variance estimator ----
+#day.adj$cor.day.net<- sapply(day.adj$cor.day.net, function(x)ifelse(x == 0,NA,x))
+
+#I need to make a better simulatated dataset that includes Every hour over 5 days and then pull out only the first observation of each hour to compare the estimates. 
+
+set.seed(1)
+#Data Creation
+Day1<- rep(1,144)
+Day2<- rep(2,144)
+Day3<- rep(3,144)
+Day4<- rep(4,144)
+Day5<- rep(5,144)
+Day6<- rep(6,144)
+Day7<- rep(7,144)
+Day8<- rep(8,144)
+Day9<- rep(9,144)
+Day10<- rep(10,144)
+Day11<- rep(11,144)
+Day<- c(Day1,Day2,Day3,Day4,Day5,Day6,Day7,Day8,Day9,Day10,Day11)
+obs<- round(rnorm(length(Day),mean = 5,sd = 2.5))
+period <- rep(seq(from= 1 ,to =6),264)
+data<- data.frame(Day,period ,obs)
+
+
+total_passage<- sum(obs)
+Standarddev<- sd(obs)
+variance<- var(obs)
+
+
+
+#Converting the data to the survey format
+samp_data<- filter(data,period == 1) # Sampling only the first 10 minutes of each hour
+samp_data$Hour<- rep(0:23,11)
+samp_data<- samp_data %>% 
+  select(!period)
+samp_data$Month<- rep(1,nrow(samp_data))
+Dat<- samp_data
+
+Dat<- Dat %>% 
+  mutate(hnet= obs*6) 
+
+
+
+#Getting the variables of the V5 estimator 
+
+f<- 1/6 # The proportion of possible observations that were actually collected
+n<- nrow(filter(Dat,!is.na(hnet))) # number of hours that were sampled 
+
+y_bar<- round(sum(Dat$hnet/n,na.rm = T)) #Daily mean escapement (sum(y_sub_i)/n)
+
+tmp<-sapply(5:length(Dat$hnet), function(x){
+  (Dat[x,]/2 - Dat[x-1,]+ Dat[x-2,] - Dat[x-3,] + Dat[x-4,]/2)^2/(3.5*(n-4))
+})
+
+Cj<- unlist(tmp['hnet',])
+x<- sum(Cj,na.rm = T)
+
+Vhat_ybar<- (1-f)*(1/n)*x
+
+Vhat_Yhat <- Vhat_ybar * (6*24*11)
+
+V_Y<- var(Dat$hnet,na.rm = T)
+
+
+
+
+#Var estimator - Hourly 
+
 
 f<- 1/6 # The proportion of possible observations that were collected
-n<- length(day.adj$Day) # number of sample days
+n<- Dat %>% 
+  filter(!is.na(hnet)) %>% 
+  summarise(length(hnet))
+n<- n$`length(hnet)`
 
-y_bar<- round(sum(day.adj$cor.day.net/n)) #Daily mean escapement (sum(y_sub_i)/n)
 
+N<- length(Dat$hnet)
 
+y_bar<- round(sum(day.adj$cor.day.net/length(filter(day.adj,!is.na(cor.day.net)) ),na.rm = T)) #Daily mean escapement (sum(y_sub_i)/n)
+
+tmp<-sapply(5:length(Dat$hnet), function(x){
+  (Dat[x,]/2 - Dat[x-1,]+ Dat[x-2,] - Dat[x-3,] + Dat[x-4,]/2)^2 / (3.5*(n-4))
+})
+
+Cj<- unlist(tmp["hnet",])
+sum(Cj,na.rm = T)
+
+V5<- (1-f)*(1/n)*sum(Cj,na.rm = T)
+
+Vhat_Yhat <- V5 * (6*24*11)^2
+
+V_Y<- var(Dat$hnet,na.rm = T)
+sd(Dat$hnet,na.rm = T)
 
 
 
@@ -300,16 +385,82 @@ Data<-Data %>%
   mutate(Daily.count = sum(Hnet,na.rm = T), Monthly.count = sum(Daily.count,na.rm = T))
 
 
+# Plotting ---- 
 
-#Plot the two variables 
-scale.factor<- 10
+Data<- as.data.frame(readxl::read_xlsx("E:/CalTrout/SF_Eel_Didson/2022-23 SF Eel sonar counts.xlsx"))
+Data<-Data %>% 
+  filter(!Hour %in% seq(0.5,23.5,1))
+Data<- Data %>%  # Error in parsing out dates for the half hour marks 3-03-23
+  mutate(Date = paste(Year,Month,Day,Hour, sep = "-")) %>% 
+  mutate(Date = ymd_h(Date))
 
+# Obtain USGS data for site of interest. URL to helpful page: https://waterdata.usgs.gov/blog/dataretrieval/
+siteNo<- "11476500" # location code for Miranda
+pCode <- "00060"  # Data type: Discharge 
+start.date <- "2022-10-31"
+end.date <- as.character(today())
+Miranda <- readNWISuv(siteNumbers = siteNo,
+                      parameterCd = pCode,
+                      startDate = start.date,
+                      endDate = end.date)
+Miranda<- renameNWISColumns(Miranda)
+
+#Join the Review data and USGS flow data
+names(Data)
+names(Miranda)
+Data<- left_join(Data,Miranda, by = c("Date" = "dateTime"))
+
+# Remove the counts that are less than 40cm and correcting the net counts
+Data<-Size_correction(Data)
+
+## Accounting for single hours down 
+Data<- Missing_Hours(Data)
+
+#Adding in correction factor and daily net movement and then correcting the daily net movement
+day_adj<- day.adj(Data = Data, twenty_min_file = F)
+names(day_adj)<- c("Year", "Month", "Day", "Dailynet", "missinghrs", "daycorrectionfactor", "corrected.daily.net"  )
+
+Day_data<- day_adj %>% 
+  select(!"Dailynet":"daycorrectionfactor")
+
+#Adding in the monthly correction factor and monthly net movement then correcting the monthly movement
+days.per.month<- day_adj %>% 
+  group_by(Month) %>% 
+  summarise(length(Day))
+
+month.adj<- day_adj %>% 
+  group_by(Month) %>% 
+  summarise(Monthlynet= sum(corrected.daily.net,na.rm = T), missing_day_vals= n_distinct(which(corrected.daily.net == 0.00))) %>% 
+  mutate(monthcorrectionfactor = missing_day_vals/days.per.month$`length(Day)`, corrected.monthly.net = round(Monthlynet + (Monthlynet*monthcorrectionfactor ))) %>% 
+  ungroup()
+
+names(month.adj)<- c("Month","Monthlynet","missing_day_vals","monthcorrectionfactor", "corrected.monthly.net" )  
+
+Month_data<- month.adj %>% 
+  select("Month", "corrected.monthly.net")
+names(Month_data)
+
+
+## Join the daily and monthly counts to the orignial dataset so that counts and the flows can be plotted together----
+
+Data<- left_join(Data,Day_data,by = c('Year','Month','Day'))
+Data<- left_join(Data,Month_data,by = c('Month'))
+
+Data$Date<- as.character(Data$Date)
+Data<-separate(Data,Date,into = c("USGS_Date","USGS_Hour"), sep = " ",remove = F)
+Data$USGS_Date<- as.POSIXct(Data$USGS_Date)
+Data$Date<- as.POSIXct(Data$Date)
+
+##Plot the two variables ----
+
+
+Passage_plot<- function(Data){
 
 # function to scale the axis automatically 
-max_first  <- max(Data$Daily.count)   # Specify max of first y axis
-max_second <- max(Data$Flow_Inst) # Specify max of second y axis
-min_first  <- min(Data$Daily.count)   # Specify min of first y axis
-min_second <- min(Data$Flow_Inst) # Specify min of second y axis
+max_first  <- max(Data$corrected.daily.net,na.rm = T)   # Specify max of first y axis
+max_second <- max(Data$Flow_Inst,na.rm = T) # Specify max of second y axis
+min_first  <- min(day_adj$corrected.daily.net,na.rm = T)   # Specify min of first y axis
+min_second <- min(Data$Flow_Inst,na.rm = T) # Specify min of second y axis
 
 # scale and shift variables calculated based on desired mins and maxes
 scale = (max_second - min_second)/(max_first - min_first)
@@ -325,34 +476,27 @@ inv_scale_function <- function(x, scale, shift){
   return ((x + shift)/scale)
 }
 
-
 plot <- Data %>%
-  #filter(Month == 11) %>% 
-  ggplot(aes(x = Date, y = Daily.count)) +
-  geom_point() +
-  geom_line(aes(y = inv_scale_function(Flow_Inst, scale, shift))) +
-  scale_y_continuous(limits = c(min_first, max_first), sec.axis = sec_axis(~scale_function(., scale, shift)))
-plot
-
-
-
-
-
-Daily.movement<-Data %>% 
-  group_by(Year,Month,Day) %>% 
-  summarise(Net = sum(Hnet,na.rm = T))
-
-Daily.movement %>% 
-  filter(Month == 12) %>% 
-  ggplot(aes(Day,Net))+
-  geom_point() +
-  # geom_line(data = Data, aes(y = Flow_Inst/scale.factor))+ 
-  # scale_y_continuous(sec.axis = sec_axis(~.*scale.factor, name="Discharge (m^3/s)")) +
+  ggplot(aes(x = Date, y = corrected.daily.net)) +
+  geom_point(shape = 20,size = 2) +
+  geom_line(aes(y = inv_scale_function(Flow_Inst, scale, shift)),col = 'blue') +
+  scale_y_continuous(limits = c(min_first, max_first), 
+                     sec.axis = sec_axis(~scale_function(., scale, shift),
+                     name = "USGS Miranda gage flow (cfs)"))+
+  ylab("Daily passage estimate")+
   theme_classic()
 
-Monthly.movement<-Data %>% 
-  group_by(Year,Month) %>% 
-  summarise(Net = sum(Hnet,na.rm = T))
+plot
+
+}
+
+
+tmp<- Data %>% 
+  filter(Month ==11 )
+
+
+Passage_plot(Data= Data)
+Passage_plot(Data= tmp)
 
 
 
