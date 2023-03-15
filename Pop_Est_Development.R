@@ -389,8 +389,8 @@ Data<-Data %>%
 
 Data<- as.data.frame(readxl::read_xlsx("E:/CalTrout/SF_Eel_Didson/2022-23 SF Eel sonar counts.xlsx"))
 Data<-Data %>% 
-  filter(!Hour %in% seq(0.5,23.5,1))
-Data<- Data %>%  # Error in parsing out dates for the half hour marks 3-03-23
+  filter(!Hour %in% seq(0.5,23.5,1)) # Error in parsing out dates for the half hour marks 3-03-23
+Data<- Data %>%  
   mutate(Date = paste(Year,Month,Day,Hour, sep = "-")) %>% 
   mutate(Date = ymd_h(Date))
 
@@ -441,7 +441,7 @@ Month_data<- month.adj %>%
 names(Month_data)
 
 
-## Join the daily and monthly counts to the orignial dataset so that counts and the flows can be plotted together----
+## Join the daily and monthly counts to the original data set so that counts and the flows can be plotted together----
 
 Data<- left_join(Data,Day_data,by = c('Year','Month','Day'))
 Data<- left_join(Data,Month_data,by = c('Month'))
@@ -482,7 +482,7 @@ plot <- Data %>%
   geom_line(aes(y = inv_scale_function(Flow_Inst, scale, shift)),col = 'blue') +
   scale_y_continuous(limits = c(min_first, max_first), 
                      sec.axis = sec_axis(~scale_function(., scale, shift),
-                     name = "USGS Miranda gage flow (cfs)"))+
+                     name = "USGS Miranda gage flow (cfs)"))+  # Find a way to make this work for each unique site
   ylab("Daily passage estimate")+
   theme_classic()
 

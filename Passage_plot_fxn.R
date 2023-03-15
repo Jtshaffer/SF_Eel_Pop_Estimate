@@ -22,7 +22,7 @@ Passage_plot<- function(Data){
   
   plot <- Data %>%
     ggplot(aes(x = Date, y = corrected.daily.net)) +
-    geom_point(shape = 20) +
+    geom_point(shape = 20,size = 2) +
     geom_line(aes(y = inv_scale_function(Flow_Inst, scale, shift)),col = 'blue') +
     scale_y_continuous(limits = c(min_first, max_first), 
                        sec.axis = sec_axis(~scale_function(., scale, shift),

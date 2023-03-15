@@ -8,78 +8,46 @@ source("Missing_Hours_fxn.R")
 source("Size_correction_fxn.R")
 source("Missing_Day_fxn.R")
 source("Passage_plot_fxn.R")
+source("Flow_Data_Fxn.R")
 
 
 Data<- as.data.frame(readxl::read_xlsx("E:/CalTrout/SF_Eel_Didson/2022-23 SF Eel sonar counts.xlsx"))
-
-Data<-Data %>% 
-  filter(!Hour %in% seq(0.5,23.5,1))
-
-Data<- Data %>%  # Error in parsing out dates for the half hour marks 3-03-23
+Data<- Data %>% 
+  filter(!Hour %in% seq(0.5,23.5,1)) %>%  #Currently this code only supports one 10 minute count per hour
   mutate(Date = paste(Year,Month,Day,Hour, sep = "-")) %>% 
   mutate(Date = ymd_h(Date))
 
-
-
 # Obtain USGS data for site of interest. URL to helpful page: https://waterdata.usgs.gov/blog/dataretrieval/
-siteNo<- "11476500" # location code for Miranda
-pCode <- "00060"  # Data type: Discharge 
-start.date <- "2022-10-31"
-end.date <- as.character(today())
-
-Miranda <- readNWISuv(siteNumbers = siteNo,
-                      parameterCd = pCode,
-                      startDate = start.date,
-                      endDate = end.date)
-Miranda<- renameNWISColumns(Miranda)
-
-
+flowdata<- Flow_data_fxn(siteNo = "11476500",pCode= "00060",start.date= "2022-10-31",end.date = as.character(today()))
 
 #Join the Review data and USGS flow data
-names(Data)
-names(Miranda)
-Data<- left_join(Data,Miranda, by = c("Date" = "dateTime"))
+Data<- left_join(Data,flowdata, by = c("Date" = "dateTime"))
 
-
-# Remove the counts that are less than 40cm and correcting the net counts
+# Remove the counts that are less than 40 cm and correct the net counts. Optional* 
 Data<-Size_correction(Data)
 
-
-## Accounting for single hours down ----
+## Accounting for hours down ----
 Data<- Missing_Hours(Data)
 
-
-#Adding in correction factor and daily net movement and then correcting the daily net movement
+#Adding in a correction for missed hours and then estimating daily net movement
 day_adj<- day.adj(Data = Data, twenty_min_file = F)
 
-
-#Adding in the monthly correction factor and monthly net movement then correcting the monthly movement
+#Adding in the missing days correction factor and calculating monthly net movement
 days.per.month<- day_adj %>% 
   group_by(Month) %>% 
-  summarise(length(Day))
+  summarise(Days= length(Day))
 
-
-month.adj<- day_adj %>% 
+month_adj<- day_adj %>% 
   group_by(Month) %>% 
-  summarise(Monthlynet= sum(corrected.daily.net,na.rm = T), missing_day_vals= n_distinct(which(corrected.daily.net == 0.00))) %>% 
-  mutate(monthcorrectionfactor = missing_day_vals/days.per.month$`length(Day)`,
+  summarise(Monthlynet= sum(corrected.daily.net,na.rm = T),
+            missing_day_vals= n_distinct(which(corrected.daily.net == 0.00))) %>% 
+  mutate(monthcorrectionfactor = missing_day_vals/days.per.month$Days,
          corrected.monthly.net = round(Monthlynet + (Monthlynet*monthcorrectionfactor ))) %>% 
   ungroup()
 
 
-## Join the daily and monthly counts to the orignial dataset so that counts and the flows can be plotted together----
-Data<- left_join(Data,Day_data,by = c('Year','Month','Day'))
-Data<- left_join(Data,Month_data,by = c('Month'))
-Data$Date<- as.character(Data$Date)
-Data<-separate(Data,Date,into = c("USGS_Date","USGS_Hour"), sep = " ",remove = F)
-Data$USGS_Date<- as.POSIXct(Data$USGS_Date)
-Data$Date<- as.POSIXct(Data$Date)
+#Viewing daily passage 
+day_adj
 
-
-# Plot the data
-Passage_plot(Data)
-
-
-# To plot only a single or set of months
-
-Passage_plot(filter(Data,Month == 11))
+#Viewing monthly passage 
+month_adj
