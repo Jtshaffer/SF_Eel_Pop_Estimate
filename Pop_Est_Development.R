@@ -361,23 +361,24 @@ month_adj<- day_adj %>%
 
 
 # Obtain USGS data for site of interest. URL to helpful page: https://waterdata.usgs.gov/blog/dataretrieval/
+Flow_data_fxn<- function(siteNo,pCode,start.date,end.date){
 siteNo<- "11476500" # location code for Miranda
 pCode <- "00060"  # Data type: Discharge 
 start.date <- "2022-10-31"
 end.date <- as.character(today())
 
-Miranda <- readNWISuv(siteNumbers = siteNo,
+tmp <- readNWISuv(siteNumbers = siteNo,
                        parameterCd = pCode,
                        startDate = start.date,
                        endDate = end.date)
-Miranda<- renameNWISColumns(Miranda)
+tmp<- renameNWISColumns(tmp) 
+}
 
 
+flowdata<- Flow_data_fxn("11476500","00060","2022-10-31",as.character(today()))
 
-#Join the Review data and USGS flow data
-names(Data)
-names(Miranda)
-Data<- left_join(Data,Miranda, by = c("Date" = "dateTime"))
+
+Data<- left_join(Data,flowdata, by = c("Date" = "dateTime"))
 
 
 Data<-Data %>% 
