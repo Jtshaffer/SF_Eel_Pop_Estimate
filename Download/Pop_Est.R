@@ -1,5 +1,6 @@
 
-# Scrip to produce the population abundance estimates for the south fork eel DIDSON station at Meyers flat - JTS 2023
+# Scrip to produce the population abundance estimates using DIDSON data 
+#Developed by JTS 2023
 
 require(tidyverse)
 require(lubridate)
