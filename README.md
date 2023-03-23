@@ -1,6 +1,7 @@
-# SF_Eel_Pop_Estimate
+# Eel River salmonid monitoring
 
-### For the fully functional script, download all and then run the Pop_Est.R file. 
+### This script has been developed to streamline and standardize the estimation of salmon populations using DIDSON data. 
+### For the fully functional script open and download the contents of the download folder and then run the Pop_Est.R script. 
 
 
 
