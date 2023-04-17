@@ -32,14 +32,14 @@ Data<-Size_correction(Data)
 Data<- Missing_Hours(Data)
 
 #Adding in a correction for missed hours and then estimating daily net movement
-day_adj<- day.adj(Data = Data, twenty_min_file = T)
+Daily_adjusted_passage<- day.adj(Data = Data, twenty_min_file = T)
 
 #Adding in the missing days correction factor and calculating monthly net movement
-days.per.month<- day_adj %>% 
+days.per.month<- Daily_adjusted_passage %>% 
   group_by(Month) %>% 
   summarise(Days= length(Day))
 
-month_adj<- day_adj %>% 
+Monthly_adjusted_passage<- Daily_adjusted_passage %>% 
   group_by(Month) %>% 
   summarise(Monthlynet= sum(corrected.daily.net,na.rm = T),
             missing_day_vals= n_distinct(which(corrected.daily.net == 0.00))) %>% 
@@ -49,7 +49,7 @@ month_adj<- day_adj %>%
 
 
 #Viewing daily passage 
-day_adj
+Daily_adjusted_passage
 
 #Viewing monthly passage 
-month_adj
+Monthly_adjusted_passage

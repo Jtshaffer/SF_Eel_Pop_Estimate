@@ -387,118 +387,111 @@ library(dataRetrieval)
 #   mutate(Daily.count = sum(Hnet,na.rm = T), Monthly.count = sum(Daily.count,na.rm = T))
 # 
 # 
-# # Plotting ---- 
-# 
-# Data<- as.data.frame(readxl::read_xlsx("E:/CalTrout/SF_Eel_Didson/2022-23 SF Eel sonar counts.xlsx"))
-# Data<-Data %>% 
-#   filter(!Hour %in% seq(0.5,23.5,1)) # Error in parsing out dates for the half hour marks 3-03-23
-# Data<- Data %>%  
-#   mutate(Date = paste(Year,Month,Day,Hour, sep = "-")) %>% 
-#   mutate(Date = ymd_h(Date))
-# 
-# # Obtain USGS data for site of interest. URL to helpful page: https://waterdata.usgs.gov/blog/dataretrieval/
-# siteNo<- "11476500" # location code for Miranda
-# pCode <- "00060"  # Data type: Discharge 
-# start.date <- "2022-10-31"
-# end.date <- as.character(today())
-# Miranda <- readNWISuv(siteNumbers = siteNo,
-#                       parameterCd = pCode,
-#                       startDate = start.date,
-#                       endDate = end.date)
-# Miranda<- renameNWISColumns(Miranda)
-# 
-# #Join the Review data and USGS flow data
-# names(Data)
-# names(Miranda)
-# Data<- left_join(Data,Miranda, by = c("Date" = "dateTime"))
-# 
-# # Remove the counts that are less than 40cm and correcting the net counts
-# Data<-Size_correction(Data)
-# 
-# ## Accounting for single hours down 
-# Data<- Missing_Hours(Data)
-# 
-# #Adding in correction factor and daily net movement and then correcting the daily net movement
-# day_adj<- day.adj(Data = Data, twenty_min_file = F)
-# names(day_adj)<- c("Year", "Month", "Day", "Dailynet", "missinghrs", "daycorrectionfactor", "corrected.daily.net"  )
-# 
-# Day_data<- day_adj %>% 
-#   select(!"Dailynet":"daycorrectionfactor")
-# 
-# #Adding in the monthly correction factor and monthly net movement then correcting the monthly movement
-# days.per.month<- day_adj %>% 
-#   group_by(Month) %>% 
-#   summarise(length(Day))
-# 
-# month.adj<- day_adj %>% 
-#   group_by(Month) %>% 
-#   summarise(Monthlynet= sum(corrected.daily.net,na.rm = T), missing_day_vals= n_distinct(which(corrected.daily.net == 0.00))) %>% 
-#   mutate(monthcorrectionfactor = missing_day_vals/days.per.month$`length(Day)`, corrected.monthly.net = round(Monthlynet + (Monthlynet*monthcorrectionfactor ))) %>% 
-#   ungroup()
-# 
-# names(month.adj)<- c("Month","Monthlynet","missing_day_vals","monthcorrectionfactor", "corrected.monthly.net" )  
-# 
-# Month_data<- month.adj %>% 
-#   select("Month", "corrected.monthly.net")
-# names(Month_data)
-# 
-# 
-# ## Join the daily and monthly counts to the original data set so that counts and the flows can be plotted together----
-# 
-# Data<- left_join(Data,Day_data,by = c('Year','Month','Day'))
-# Data<- left_join(Data,Month_data,by = c('Month'))
-# 
-# Data$Date<- as.character(Data$Date)
-# Data<-separate(Data,Date,into = c("USGS_Date","USGS_Hour"), sep = " ",remove = F)
-# Data$USGS_Date<- as.POSIXct(Data$USGS_Date)
-# Data$Date<- as.POSIXct(Data$Date)
-# 
-# ##Plot the two variables ----
-# 
-# 
-# Passage_plot<- function(Data){
-# 
-# # function to scale the axis automatically 
-# max_first  <- max(Data$corrected.daily.net,na.rm = T)   # Specify max of first y axis
-# max_second <- max(Data$Flow_Inst,na.rm = T) # Specify max of second y axis
-# min_first  <- min(day_adj$corrected.daily.net,na.rm = T)   # Specify min of first y axis
-# min_second <- min(Data$Flow_Inst,na.rm = T) # Specify min of second y axis
-# 
-# # scale and shift variables calculated based on desired mins and maxes
-# scale = (max_second - min_second)/(max_first - min_first)
-# shift = min_first - min_second
-# 
-# # Function to scale secondary axis
-# scale_function <- function(x, scale, shift){
-#   return ((x)*scale - shift)
-# }
-# 
-# # Function to scale secondary variable values
-# inv_scale_function <- function(x, scale, shift){
-#   return ((x + shift)/scale)
-# }
-# 
-# plot <- Data %>%
-#   ggplot(aes(x = Date, y = corrected.daily.net)) +
-#   geom_point(shape = 20,size = 2) +
-#   geom_line(aes(y = inv_scale_function(Flow_Inst, scale, shift)),col = 'blue') +
-#   scale_y_continuous(limits = c(min_first, max_first), 
-#                      sec.axis = sec_axis(~scale_function(., scale, shift),
-#                      name = "USGS Miranda gage flow (cfs)"))+  # Find a way to make this work for each unique site
-#   ylab("Daily passage estimate")+
-#   theme_classic()
-# 
-# plot
-# 
-# }
-# 
-# 
-# tmp<- Data %>% 
-#   filter(Month ==11 )
-# 
-# 
-# Passage_plot(Data= Data)
-# Passage_plot(Data= tmp)
+# Plotting ----
+
+Data<- as.data.frame(readxl::read_xlsx("E:/CalTrout/SF_Eel_Didson/2022-23 SF Eel sonar counts.xlsx"))
+Data$Minute<- ifelse(grepl(".5",Data[["Hour"]],fixed = T) == T,print(30),print(0)) # Minutes need to be added to the fall 2023 version of the data for record keeping purposes
+Data$Hour<- gsub(".5","",Data[["Hour"]],fixed = T)# Hours should be whole numbers in the fall 2023 data
+Data<- Data %>% 
+  #filter(!Hour %in% seq(0.5,23.5,1)) %>%  #Currently this code only supports one 10 minute count per hour
+  mutate(Date = paste(Year,Month,Day,Hour,Minute, sep = "-")) %>% 
+  mutate(Date = ymd_hm(Date))
+
+
+# Obtain USGS data for site of interest. URL to helpful page: https://waterdata.usgs.gov/blog/dataretrieval/
+flowdata<- Flow_data_fxn(siteNo = "11476500",pCode= "00060",start.date= "2022-10-31",end.date = as.character(today()))
+
+#Join the Review data and USGS flow data
+Data<- left_join(Data,flowdata, by = c("Date" = "dateTime"))
+
+# Remove the counts that are less than 40cm and correcting the net counts
+Data<-Size_correction(Data)
+
+## Accounting for single hours down
+Data<- Missing_Hours(Data)
+
+#Adding in correction factor and daily net movement and then correcting the daily net movement
+day_adj<- day.adj(Data = Data, twenty_min_file = F)
+
+names(day_adj)<- c("Year", "Month", "Day", "Dailynet", "missinghrs", "daycorrectionfactor", "corrected.daily.net"  )
+
+Day_data<- day_adj %>%
+  select(!"Dailynet":"daycorrectionfactor")
+
+#Adding in the monthly correction factor and monthly net movement then correcting the monthly movement
+days.per.month<- day_adj %>%
+  group_by(Month) %>%
+  summarise(length(Day))
+
+month.adj<- day_adj %>%
+  group_by(Month) %>%
+  summarise(Monthlynet= sum(corrected.daily.net,na.rm = T), missing_day_vals= n_distinct(which(corrected.daily.net == 0.00))) %>%
+  mutate(monthcorrectionfactor = missing_day_vals/days.per.month$`length(Day)`, corrected.monthly.net = round(Monthlynet + (Monthlynet*monthcorrectionfactor ))) %>%
+  ungroup()
+
+names(month.adj)<- c("Month","Monthlynet","missing_day_vals","monthcorrectionfactor", "corrected.monthly.net" )
+
+Month_data<- month.adj %>%
+  select("Month", "corrected.monthly.net")
+names(Month_data)
+
+
+## Join the daily and monthly counts to the original data set so that counts and the flows can be plotted together----
+
+Data<- left_join(Data,Day_data,by = c('Year','Month','Day'))
+Data<- left_join(Data,Month_data,by = c('Month'))
+
+Data$Date<- as.character(Data$Date)
+Data<-separate(Data,Date,into = c("USGS_Date","USGS_Hour"), sep = " ",remove = F)
+Data$USGS_Date<- as.POSIXct(Data$USGS_Date)
+Data$Date<- as.POSIXct(Data$Date)
+
+##Plot the two variables ----
+
+
+Passage_plot<- function(Data){
+
+# function to scale the axis automatically
+max_first  <- max(Data$corrected.daily.net,na.rm = T)   # Specify max of first y axis
+max_second <- max(Data$Flow_Inst,na.rm = T) # Specify max of second y axis
+min_first  <- min(day_adj$corrected.daily.net,na.rm = T)   # Specify min of first y axis
+min_second <- min(Data$Flow_Inst,na.rm = T) # Specify min of second y axis
+
+# scale and shift variables calculated based on desired mins and maxes
+scale = (max_second - min_second)/(max_first - min_first)
+shift = min_first - min_second
+
+# Function to scale secondary axis
+scale_function <- function(x, scale, shift){
+  return ((x)*scale - shift)
+}
+
+# Function to scale secondary variable values
+inv_scale_function <- function(x, scale, shift){
+  return ((x + shift)/scale)
+}
+
+plot <- Data %>%
+  ggplot(aes(x = Date, y = corrected.daily.net)) +
+  geom_point(shape = 20,size = 2) +
+  geom_line(aes(y = inv_scale_function(Flow_Inst, scale, shift)),col = 'blue') +
+  scale_y_continuous(limits = c(min_first, max_first),
+                     sec.axis = sec_axis(~scale_function(., scale, shift),
+                     name = "USGS Miranda gage flow (cfs)"))+  # Find a way to make this work for each unique site
+  ylab("Daily passage estimate")+
+  theme_classic()
+
+plot
+
+}
+
+
+tmp<- Data %>%
+  filter(Month ==11 )
+
+
+Passage_plot(Data= Data)
+Passage_plot(Data= tmp)
 
 
 
