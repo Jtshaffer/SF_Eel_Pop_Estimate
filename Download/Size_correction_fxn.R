@@ -4,5 +4,5 @@ Size_correction<- function(Data = Data){
   })
   
   Data<- Data %>% 
-    mutate(Net.corrected = Net - lessthan40)  
+    mutate(Net.size.corrected = Net - lessthan40)  
 }
