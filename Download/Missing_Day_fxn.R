@@ -1,4 +1,4 @@
-day.adj<-function(Data= X, twenty_min_file = T){
+day.adj<-function(Data= X, twenty_min_file = F){
   if(twenty_min_file == T){ 
     Data %>% 
       group_by(Year,Month,Day) %>% 
