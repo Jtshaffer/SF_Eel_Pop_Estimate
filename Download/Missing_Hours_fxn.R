@@ -1,4 +1,4 @@
-Missing_Hours<- function(Data= Data){
+Missing_Hours<-  function(Data= Data){
   Data$New.Net<- Data[[ifelse("Net.size.corrected" %in% colnames(Data),"Net.size.corrected","Net")]]
   ind <- which(is.na(Data[[ifelse("Net.corrected" %in% colnames(Data),"Net.size.corrected","Net")]]))
   ind_minus <- ind - 24
