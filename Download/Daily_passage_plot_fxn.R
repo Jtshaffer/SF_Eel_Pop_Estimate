@@ -1,6 +1,6 @@
 #Daily Passage Plot
 
-daily_passage_plot<- function(Data1= XYZ, Data2= ZYX ){
+daily_passage_plot<- function(Data1= XYZ, Data2= ZYX, DateBreaks = "1 day" ){
   Data2<-Data2 %>% 
     mutate(Date= as.POSIXct(Date))
   
@@ -33,7 +33,7 @@ daily_passage_plot<- function(Data1= XYZ, Data2= ZYX ){
     scale_y_continuous(limits = c(min_first, max_first),
                        sec.axis = sec_axis(~scale_function(., scale, shift),
                                            name = "USGS Miranda gage flow (cfs)"))+
-    scale_x_datetime(date_breaks = "1 day",date_labels = "%b %d" )+
+    scale_x_datetime(date_breaks = DateBreaks ,date_labels = "%b %d" )+
     # geom_point(data= Data2, aes(x=Date , y = Daily.Net), shape = 0,size = 2) +
     geom_point(aes(x=Data2$Date , y = Data2$Daily.Net), shape = 18,size = 1.75) +
     # geom_text(data = Data2, aes(x = Date, y = Daily.Net, label = Daily.Net),nudge_y = 25, ) +
